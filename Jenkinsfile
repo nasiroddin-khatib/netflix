@@ -59,12 +59,16 @@ pipeline {
 
         stage('Docker Build') {
             steps {
-                sh """
-                docker build \
-                --build-arg TMDB_V3_API_KEY=YOUR_TMDB_API_KEY \
-                -t $DOCKER_HUB/$IMAGE_NAME:$IMAGE_TAG .
-                """
-            }
+withCredentials([string(credentialsId: 'sonar', variable: 'SONAR_TOKEN')]) {
+
+    sh """
+    $SCANNER_HOME/bin/sonar-scanner \
+    -Dsonar.projectName=Netflix \
+    -Dsonar.projectKey=Netflix \
+    -Dsonar.login=$SONAR_TOKEN
+    """
+}            
+}
         }
 
         stage('Docker Login') {
