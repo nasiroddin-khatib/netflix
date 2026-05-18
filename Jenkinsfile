@@ -38,7 +38,7 @@ pipeline {
 
                 withSonarQubeEnv('sonar-server') {
 
-                    withCredentials([string(credentialsId: 'sonar-token', variable: 'SONAR_TOKEN')]) {
+                    withCredentials([string(credentialsId: 'sonar', variable: 'SONAR_TOKEN')]) {
 
                         sh """
                         $SCANNER_HOME/bin/sonar-scanner \
