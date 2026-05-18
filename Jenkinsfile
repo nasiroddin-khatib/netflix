@@ -35,12 +35,18 @@ pipeline {
 
         stage('SonarQube Analysis') {
             steps {
+
                 withSonarQubeEnv('sonar-server') {
-                    sh """
-                    $SCANNER_HOME/bin/sonar-scanner \
-                    -Dsonar.projectName=Netflix \
-                    -Dsonar.projectKey=Netflix
-                    """
+
+                    withCredentials([string(credentialsId: 'sonar-token', variable: 'SONAR_TOKEN')]) {
+
+                        sh """
+                        $SCANNER_HOME/bin/sonar-scanner \
+                        -Dsonar.projectName=Netflix \
+                        -Dsonar.projectKey=Netflix \
+                        -Dsonar.login=$SONAR_TOKEN
+                        """
+                    }
                 }
             }
         }
@@ -59,20 +65,18 @@ pipeline {
 
         stage('Docker Build') {
             steps {
-withCredentials([string(credentialsId: 'sonar', variable: 'SONAR_TOKEN')]) {
 
-    sh """
-    $SCANNER_HOME/bin/sonar-scanner \
-    -Dsonar.projectName=Netflix \
-    -Dsonar.projectKey=Netflix \
-    -Dsonar.login=$SONAR_TOKEN
-    """
-}            
-}
+                sh """
+                docker build \
+                --build-arg TMDB_V3_API_KEY=27e23364a34e9c7bbd1a316cbc15e8e5 \
+                -t $DOCKER_HUB/$IMAGE_NAME:$IMAGE_TAG .
+                """
+            }
         }
 
         stage('Docker Login') {
             steps {
+
                 withCredentials([usernamePassword(
                     credentialsId: 'docker',
                     usernameVariable: 'DOCKER_USER',
@@ -98,6 +102,7 @@ withCredentials([string(credentialsId: 'sonar', variable: 'SONAR_TOKEN')]) {
 
         stage('Deploy To Kubernetes') {
             steps {
+
                 dir('Kubernetes') {
 
                     withKubeConfig(
@@ -110,22 +115,6 @@ withCredentials([string(credentialsId: 'sonar', variable: 'SONAR_TOKEN')]) {
                     }
                 }
             }
-        }
-    }
-
-    post {
-        always {
-            emailext attachLog: true,
-            subject: "${currentBuild.result} : ${env.JOB_NAME}",
-            body: """
-            Project: ${env.JOB_NAME}
-
-            Build Number: ${env.BUILD_NUMBER}
-
-            URL: ${env.BUILD_URL}
-            """,
-            to: 'nasirkhatib01@gmail.com',
-            attachmentsPattern: 'trivyfs.txt,trivyimage.txt'
         }
     }
 }
